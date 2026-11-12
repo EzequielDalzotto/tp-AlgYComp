@@ -17,14 +17,16 @@ máximo en grafos generales (cota inferior), nunca para resolver Vertex Cover.
 | `complejidad.py` | Verificador `es_cobertura` (certificado en NP), reducción Vertex Cover <-> Independent Set, fuerza bruta y verificación empírica |
 | `experimentos.py` | Barridos con réplicas y semillas, tiempos, razones de aproximación, CSV |
 | `visualizacion.py` | Dibujo de la grilla con la cobertura y gráficas de resultados |
-| `tests.py` | 23 pruebas automáticas (`python tests.py`) |
-| `main.py` | `python main.py demo`, `rapido` o `completo` |
+| `demo_viva.py` | Reproducción gráfica de las decisiones de greedy y matching maximal |
+| `tests.py` | Pruebas automáticas (`python tests.py`) |
+| `main.py` | `python main.py demo`, `en-vivo`, `rapido` o `completo` |
 | `notebook.ipynb` | Experimentos del informe, en el orden del proyecto |
 
 ## Uso rápido
 
     python tests.py            # verifica que todo funcione
     python main.py demo        # figuras de la grilla pura y la perturbada
+    python main.py en-vivo     # ventana interactiva para la exposición
     python main.py rapido      # barrido chico (~1 min)
 
 ```python
@@ -37,6 +39,22 @@ cob = greedy_grado_max(g)
 print(len(cob), es_cobertura(g, cob))
 print(branching_exacto(g, timeout=10))     # óptimo exacto con límite de tiempo
 ```
+
+## Demo en vivo
+
+En una sesión de escritorio, ejecutá `python main.py en-vivo`. **Siguiente** avanza una
+decisión, **Anterior** vuelve una y **Reiniciar** conserva el mapa. Al cambiar de
+algoritmo, se vuelve al paso cero sobre la misma instancia.
+
+Para comparar perturbaciones, cambiá las dimensiones (2–8), las probabilidades
+(0–1) o la semilla y pulsá **Generar instancia**. Por ejemplo: probá la grilla
+pura inicial y después `0,4` para diagonales y `0,25` para quitar calles.
+Las diagonales se dibujan con líneas discontinuas y las calles quitadas no
+aparecen. La demo muestra las decisiones registradas por los algoritmos del
+proyecto; no mide rendimiento ni genera archivos en `resultados/`.
+
+Si no se abre la ventana, comprobá que tu instalación de Python tenga un
+backend gráfico de Matplotlib, como TkAgg, y que no estés forzando `Agg`.
 
 ## Decisiones de implementación
 

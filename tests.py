@@ -15,7 +15,8 @@ from complejidad import (es_cobertura, es_independiente, complemento,
                          reduccion_vc_a_is, verificar_complemento,
                          verificar_reduccion)
 from grafos import (asignar_costos, cantidad_aristas, contar_diagonales,
-                    es_bipartito, es_conexo, grilla_perturbada, grilla_pura)
+                    aristas, es_bipartito, es_conexo, grilla_perturbada,
+                    grilla_pura)
 
 
 def instancias_chicas(cantidad=12):
@@ -240,6 +241,62 @@ def test_sin_pesos_equivale_a_pesos_uno():
     for g in instancias_chicas():
         w1 = {v: 1 for v in g}
         assert branching_exacto(g, w=w1)["tam"] == branching_exacto(g)["tam"]
+
+
+def test_demo_greedy_registra_la_decision_real():
+    adj = {0: {1}, 1: {0, 2, 3}, 2: {1}, 3: {1}}
+    pasos = []
+    cobertura = greedy_grado_max(adj, al_elegir=lambda *paso: pasos.append(paso))
+    assert cobertura == {1}
+    assert pasos == [((1,), None)]
+
+
+def test_demo_matching_registra_las_aristas_elegidas():
+    adj = {0: {1}, 1: {0, 2}, 2: {1, 3}, 3: {2}}
+    pasos = []
+    cobertura, matching = matching_maximal_2aprox(
+        adj, al_elegir=lambda *paso: pasos.append(paso))
+    assert cobertura == {0, 1, 2, 3}
+    assert pasos == [((0, 1), (0, 1)), ((2, 3), (2, 3))]
+    assert [arista for _, arista in pasos] == matching
+
+
+def test_demo_reproduce_las_coberturas_de_los_algoritmos():
+    from demo_viva import crear_pasos
+
+    adj = grilla_perturbada(4, 4, 0.4, 0.25, seed=42)
+    calles = set(aristas(adj))
+    for metodo, esperado in (("Greedy", greedy_grado_max(adj)),
+                             ("Matching maximal", matching_maximal_2aprox(adj)[0])):
+        pasos = crear_pasos(adj, metodo)
+        assert not pasos[0].camaras and not pasos[0].cubiertas
+        for anterior, actual in zip(pasos, pasos[1:]):
+            assert actual.camaras > anterior.camaras
+            assert actual.cubiertas == {e for e in calles if actual.camaras.intersection(e)}
+            assert actual.recientes == actual.cubiertas - anterior.cubiertas
+        assert pasos[-1].camaras == esperado
+        assert pasos[-1].cubiertas == calles
+
+
+def test_demo_navegacion_conserva_la_instancia_al_cambiar_metodo():
+    from demo_viva import Simulacion
+
+    modelo = Simulacion()
+    modelo.generar(3, 4, 0.4, 0.2, 19)
+    instancia = modelo.adj
+    modelo.mover(-1)
+    assert modelo.indice == 0
+    modelo.mover(1)
+    assert modelo.indice == 1
+    modelo.cambiar_metodo("Matching maximal")
+    assert modelo.adj is instancia and modelo.indice == 0
+    for _ in modelo.pasos:
+        modelo.mover(1)
+    assert modelo.indice == len(modelo.pasos) - 1
+    modelo.reiniciar()
+    assert modelo.indice == 0 and modelo.adj is instancia
+    modelo.generar(3, 4, 0.4, 0.2, 19)
+    assert modelo.adj == instancia and modelo.indice == 0
 
 
 # ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ main.py
 Punto de entrada. Uso:
 
     python main.py demo        # visualiza una instancia y compara algoritmos
+    python main.py en-vivo     # abre el recorrido gráfico paso a paso
     python main.py rapido      # barrido chico (1-2 minutos), para probar
     python main.py completo    # barrido del informe (puede tardar bastante)
 
@@ -14,6 +15,11 @@ justificalos en el informe.
 
 import os
 import sys
+
+if __name__ == "__main__" and sys.argv[1:2] == ["en-vivo"]:
+    from demo_viva import lanzar
+
+    raise SystemExit(lanzar())
 
 import matplotlib
 

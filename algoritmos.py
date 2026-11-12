@@ -34,7 +34,7 @@ from grafos import aristas, cantidad_aristas, colorear_bipartito, copiar
 # ===========================================================================
 
 
-def greedy_grado_max(adj, desempate="indice", seed=None):
+def greedy_grado_max(adj, desempate="indice", seed=None, *, al_elegir=None):
     """
     Elige siempre el nodo de mayor grado del grafo residual, lo agrega a la
     cobertura y le quita sus aristas. Repite hasta que no queden aristas.
@@ -48,6 +48,8 @@ def greedy_grado_max(adj, desempate="indice", seed=None):
 
     No tiene garantía de aproximación constante: en el peor caso la razón
     crece como O(log n).
+
+    Optional observer: al_elegir(new_camera_nodes, None) after each selection.
     """
     g = copiar(adj)
     m_rest = cantidad_aristas(g)
@@ -72,6 +74,8 @@ def greedy_grado_max(adj, desempate="indice", seed=None):
             g[u].discard(v)
             if g[u]:
                 heapq.heappush(heap, (-len(g[u]), prioridad[u], u))
+        if al_elegir is not None:
+            al_elegir((v,), None)
     return cobertura
 
 
@@ -80,7 +84,7 @@ def greedy_grado_max(adj, desempate="indice", seed=None):
 # ===========================================================================
 
 
-def matching_maximal_2aprox(adj, orden="fijo", seed=None):
+def matching_maximal_2aprox(adj, orden="fijo", seed=None, *, al_elegir=None):
     """
     Recorre las aristas; si ninguno de sus extremos está usado, la agrega al
     matching y suma AMBOS extremos a la cobertura.
@@ -96,6 +100,8 @@ def matching_maximal_2aprox(adj, orden="fijo", seed=None):
     OPT >= |M|, y por lo tanto |C| = 2|M| <= 2 * OPT.
 
     Devuelve (cobertura, matching).
+
+    Optional observer: al_elegir(new_camera_nodes, selected_edge) for accepted edges.
     """
     lista = aristas(adj)
     if orden == "aleatorio":
@@ -107,6 +113,8 @@ def matching_maximal_2aprox(adj, orden="fijo", seed=None):
             matching.append((u, v))
             usados.add(u)
             usados.add(v)
+            if al_elegir is not None:
+                al_elegir((u, v), (u, v))
     return set(usados), matching
 
 
