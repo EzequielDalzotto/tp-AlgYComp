@@ -9,8 +9,8 @@ instancia. Columnas principales:
   n, m, nodos_grafo, aristas   tamaño de la grilla
   p_d, p_q, replica, seed      parámetros y semilla de la instancia
   bipartito                    True si el grafo es bipartito
-  algoritmo                    greedy | 2aprox_fijo | 2aprox_aleatorio |
-                               branching | konig
+  algoritmo                    greedy | greedy_aleatorio | 2aprox_fijo |
+                               2aprox_aleatorio | branching | konig
   tam                          tamaño de la cobertura obtenida
   valida                       la cobertura pasó el verificador es_cobertura
   tiempo_s                     tiempo (promedio de varias repeticiones)
@@ -28,8 +28,8 @@ import zlib
 import pandas as pd
 
 from algoritmos import (branching_exacto, cota_inferior, costo_cobertura,
-                        greedy_grado_max, greedy_ponderado, konig_cobertura,
-                        local_ratio_2aprox, matching_maximal_2aprox,
+                        greedy_aleatorio, greedy_grado_max, greedy_ponderado,
+                        konig_cobertura, local_ratio_2aprox, matching_maximal_2aprox,
                         podar_redundantes)
 from complejidad import es_cobertura
 from grafos import (asignar_costos, cantidad_aristas, contar_diagonales,
@@ -104,6 +104,9 @@ def correr_instancia(adj, n, m, p_d, p_q, replica, seed,
     # --- heurísticas ---
     cob, t = medir(lambda: greedy_grado_max(adj), repeticiones)
     registrar("greedy", cob, t)
+
+    resultado, t = medir(lambda: greedy_aleatorio(adj, seed=seed), repeticiones)
+    registrar("greedy_aleatorio", resultado.cobertura, t)
 
     cob, t = medir(lambda: matching_maximal_2aprox(adj)[0], repeticiones)
     registrar("2aprox_fijo", cob, t)

@@ -349,6 +349,40 @@ def test_demo_greedy_aleatorio_usa_la_semilla_de_la_instancia():
     assert modelo.pasos[-1].intento_ganador == esperado.intento_ganador
 
 
+def test_barrido_mide_greedy_aleatorio_incluyendo_los_diez_intentos_y_la_poda():
+    from unittest.mock import call, patch
+
+    from algoritmos import greedy_aleatorio
+    from experimentos import correr_instancia
+
+    centro = (0, 0)
+    hojas = {(0, 1), (1, 0), (1, 1)}
+    estrella = {centro: hojas, **{hoja: {centro} for hoja in hojas}}
+    esperado = greedy_aleatorio(estrella, seed=2)
+    reloj = 0.0
+
+    def podar_con_reloj(*args, **kwargs):
+        nonlocal reloj
+        reloj += 0.125
+        return podar_redundantes(*args, **kwargs)
+
+    with (
+        patch("algoritmos.podar_redundantes", side_effect=podar_con_reloj) as poda,
+        patch("experimentos.time.perf_counter", side_effect=lambda: reloj),
+        patch("experimentos.greedy_aleatorio", wraps=greedy_aleatorio) as ejecucion,
+    ):
+        filas = correr_instancia(estrella, 2, 2, 1.0, 0.25, 0, 2,
+                                 repeticiones=3, con_branching=False)
+
+    [fila] = [f for f in filas if f["algoritmo"] == "greedy_aleatorio"]
+    assert any(f["algoritmo"] == "2aprox_aleatorio" for f in filas)
+    assert fila["valida"] and fila["tam"] == len(esperado.cobertura) == 1
+    assert fila["razon_real"] == fila["razon_cota"] == 1.0
+    assert ejecucion.call_args_list == [call(estrella, seed=2)] * 3
+    assert poda.call_count == 3 * 10
+    assert fila["tiempo_s"] == 10 * 0.125
+
+
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":

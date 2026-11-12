@@ -50,7 +50,7 @@ algoritmo, se vuelve al paso cero sobre la misma instancia.
 pendientes. Hace diez intentos con la semilla de la instancia y retira cámaras
 redundantes en cada uno. Se reproduce únicamente el primer intento que logró
 la menor cantidad de cámaras. Si hubo retiradas en ese intento, se muestran
-en el último paso. Este método se agrega a la demo en vivo, no a los barridos.
+en el último paso.
 
 Para comparar perturbaciones, cambiá las dimensiones (2–8), las probabilidades
 (0–1) o la semilla y pulsá **Generar instancia**. Por ejemplo: probá la grilla
@@ -73,5 +73,11 @@ backend gráfico de Matplotlib, como TkAgg, y que no estés forzando `Agg`.
 * **Razones:** `razon_real = tam / óptimo` (óptimo conocido) y `razon_cota = tam / cota inferior` (cota superior de la razón real, para cuando el exacto no termina).
 
 ## Para el informe
+
+Los barridos `rapido` y `completo` incluyen `greedy_aleatorio` como un método
+distinto de `2aprox_aleatorio`. Su tiempo es el promedio de ejecuciones completas:
+cada repetición usa la misma semilla de la instancia y mide los diez intentos,
+incluida la poda. Los CSV y gráficos históricos solo se actualizan al volver a
+ejecutar el barrido correspondiente.
 
 Los parámetros de `main.py completo` y del notebook son orientativos. Elegí los tuyos (tamaños, `p_d`, `p_q`, réplicas, costos), registrá la semilla base y justificá cada decisión.
