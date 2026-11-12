@@ -26,6 +26,7 @@ import random
 import sys
 import time
 from collections import deque
+from dataclasses import dataclass
 
 from grafos import aristas, cantidad_aristas, colorear_bipartito, copiar
 
@@ -77,6 +78,45 @@ def greedy_grado_max(adj, desempate="indice", seed=None, *, al_elegir=None):
         if al_elegir is not None:
             al_elegir((v,), None)
     return cobertura
+
+
+@dataclass(frozen=True)
+class ResultadoGreedyAleatorio:
+    cobertura: frozenset
+    orden: tuple
+    intento_ganador: int
+    intentos: int
+
+
+def greedy_aleatorio(adj, *, seed=None, intentos=10, top_k=3):
+    """Sample from the top residual degrees and keep the first best pruned cover.
+
+    The returned selection order precedes pruning so the winner can be replayed.
+    """
+    if intentos < 1 or top_k < 1:
+        raise ValueError("intentos and top_k must be positive")
+
+    semillas = random.Random(seed)
+    mejor = None
+    for intento in range(1, intentos + 1):
+        rng = random.Random(semillas.getrandbits(64))
+        residual = copiar(adj)
+        orden = []
+        while True:
+            candidatos = sorted((v for v in residual if residual[v]),
+                                key=lambda v: (-len(residual[v]), v))[:top_k]
+            if not candidatos:
+                break
+            v = rng.choice(candidatos)
+            orden.append(v)
+            for vecino in residual.pop(v):
+                residual[vecino].remove(v)
+
+        cobertura = podar_redundantes(adj, orden)
+        if mejor is None or len(cobertura) < len(mejor.cobertura):
+            mejor = ResultadoGreedyAleatorio(frozenset(cobertura), tuple(orden),
+                                             intento, intentos)
+    return mejor
 
 
 # ===========================================================================

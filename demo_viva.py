@@ -4,10 +4,11 @@ import sys
 import textwrap
 from dataclasses import dataclass
 
-from algoritmos import greedy_grado_max, matching_maximal_2aprox
+from algoritmos import greedy_aleatorio, greedy_grado_max, matching_maximal_2aprox
 from grafos import aristas, es_diagonal, grilla_perturbada
 
 METODOS = {"Greedy": greedy_grado_max, "Matching maximal": matching_maximal_2aprox}
+ALEATORIO = "Greedy aleatorio"
 
 
 @dataclass(frozen=True)
@@ -17,13 +18,19 @@ class Paso:
     recientes: frozenset
     nuevas_camaras: tuple = ()
     arista_elegida: tuple | None = None
+    retiradas: frozenset = frozenset()
+    intento_ganador: int | None = None
+    intentos: int = 0
 
 
-def crear_pasos(adj, metodo):
+def crear_pasos(adj, metodo, *, seed=None):
     """Capture immutable display states from the production algorithm's decisions."""
+    resultado = greedy_aleatorio(adj, seed=seed) if metodo == ALEATORIO else None
+    metadatos = ({"intento_ganador": resultado.intento_ganador, "intentos": resultado.intentos}
+                 if resultado is not None else {})
     pendientes = set(aristas(adj))
     camaras, cubiertas = set(), set()
-    pasos = [Paso(frozenset(), frozenset(), frozenset())]
+    pasos = [Paso(frozenset(), frozenset(), frozenset(), **metadatos)]
 
     def registrar(nuevas, elegida):
         recientes = {e for e in pendientes if any(v in e for v in nuevas)}
@@ -31,9 +38,17 @@ def crear_pasos(adj, metodo):
         pendientes.difference_update(recientes)
         cubiertas.update(recientes)
         pasos.append(Paso(frozenset(camaras), frozenset(cubiertas),
-                          frozenset(recientes), nuevas, elegida))
+                          frozenset(recientes), nuevas, elegida, **metadatos))
 
-    METODOS[metodo](adj, al_elegir=registrar)
+    if resultado is None:
+        METODOS[metodo](adj, al_elegir=registrar)
+    else:
+        for v in resultado.orden:
+            registrar((v,), None)
+        retiradas = frozenset(camaras - resultado.cobertura)
+        if retiradas:
+            pasos.append(Paso(resultado.cobertura, frozenset(cubiertas), frozenset(),
+                              retiradas=retiradas, **metadatos))
     return pasos
 
 
@@ -55,7 +70,7 @@ class Simulacion:
         self.cambiar_metodo(self.metodo)
 
     def cambiar_metodo(self, metodo):
-        self.pasos = crear_pasos(self.adj, metodo)
+        self.pasos = crear_pasos(self.adj, metodo, seed=self.semilla)
         self.metodo = metodo
         self.reiniciar()
 
@@ -97,7 +112,8 @@ class DemoViva:
         self.generar.on_clicked(self._generar)
 
         self.fig.text(0.68, 0.265, "Algoritmo", fontsize=12, weight="bold")
-        self.selector = RadioButtons(self.fig.add_axes([0.68, 0.15, 0.26, 0.10]), list(METODOS))
+        self.selector = RadioButtons(self.fig.add_axes([0.68, 0.15, 0.26, 0.10]),
+                                     [*METODOS, ALEATORIO])
         self.selector.on_clicked(self._cambiar_metodo)
 
         self.anterior = Button(self.fig.add_axes([0.06, 0.06, 0.14, 0.06]), "Anterior")
@@ -146,7 +162,7 @@ class DemoViva:
         paso = modelo.pasos[modelo.indice]
         total = len(modelo.pasos) - 1
         colores = {"pendiente": "#8191a1", "cubierta": "#16795f", "reciente": "#c66a1a",
-                   "elegida": "#6744ae", "camara": "#165c91"}
+                   "elegida": "#6744ae", "camara": "#165c91", "retirada": "#a12436"}
         self.ax.clear()
         for calle in modelo.calles:
             ((i, j), (k, l)) = calle
@@ -167,6 +183,9 @@ class DemoViva:
             self.ax.scatter(j, -i, s=155 if nueva else 105, zorder=4,
                             facecolors=colores["camara"] if camara else "#ffffff",
                             edgecolors="#172d42", linewidths=2.2 if nueva else 0.8)
+            if (i, j) in paso.retiradas:
+                self.ax.scatter(j, -i, s=80, marker="x", c=colores["retirada"],
+                                linewidths=2, zorder=5)
             self.ax.annotate(f"{i},{j}", (j, -i), xytext=(0, 8),
                              textcoords="offset points", ha="center", fontsize=8, zorder=5)
 
@@ -174,13 +193,19 @@ class DemoViva:
         self.ax.set_xlim(-0.45, modelo.columnas - 0.55)
         self.ax.set_ylim(-modelo.filas + 0.55, 0.45)
         self.ax.axis("off")
-        self.ax.set_title(f"{modelo.metodo}  ·  Grilla {modelo.filas} × {modelo.columnas}"
-                          f"  ·  Semilla {modelo.semilla}", fontsize=11)
+        titulo = (f"{modelo.metodo}  ·  Grilla {modelo.filas} × {modelo.columnas}"
+                  f"  ·  Semilla {modelo.semilla}")
+        if paso.intento_ganador is not None:
+            titulo += f"\nIntento ganador: {paso.intento_ganador} de {paso.intentos}"
+        self.ax.set_title(titulo, fontsize=11)
         marcas = [Line2D([0], [0], color=colores[k], lw=2, label=etiqueta)
                   for k, etiqueta in (("pendiente", "Pendiente"), ("cubierta", "Cubierta"),
                                       ("reciente", "Recién cubierta"), ("elegida", "Elegida"))]
         marcas.append(Line2D([0], [0], color=colores["camara"], marker="o", ls="",
                              label="Cámara"))
+        if paso.retiradas:
+            marcas.append(Line2D([0], [0], color=colores["retirada"], marker="x", ls="",
+                                 label="Retirada"))
         self.ax.legend(handles=marcas, loc="lower center", bbox_to_anchor=(0.5, -0.055),
                        ncol=3, fontsize=8, frameon=False)
 
@@ -188,14 +213,20 @@ class DemoViva:
                            f"   ·   {len(paso.cubiertas)}/{len(modelo.calles)} calles cubiertas")
         if not modelo.indice:
             detalle = "Todavía no se eligieron cámaras. Avanzá para ver la primera decisión."
+        elif paso.retiradas:
+            detalle = (f"La poda retiró {len(paso.retiradas)} cámara(s) redundante(s). "
+                       "Todas las calles siguen cubiertas.")
         elif paso.arista_elegida:
             u, v = paso.arista_elegida
             detalle = (f"Matching eligió la calle {u} – {v}: ninguno de sus extremos tenía "
                        f"cámara. Se cubrieron {len(paso.recientes)} calles nuevas.")
+        elif modelo.metodo == ALEATORIO:
+            detalle = (f"Se sorteó {paso.nuevas_camaras[0]} entre hasta tres cruces con "
+                       f"más calles pendientes. Cubrió {len(paso.recientes)} calles nuevas.")
         else:
             detalle = (f"Greedy eligió {paso.nuevas_camaras[0]}: ningún otro cruce cubría "
                        f"más de {len(paso.recientes)} calles pendientes.")
-        if modelo.indice == total:
+        if modelo.indice == total and not paso.retiradas:
             detalle += " Cobertura completa."
         self.explicacion.set_text(textwrap.fill(detalle, 70))
         self.anterior.set_active(modelo.indice > 0)

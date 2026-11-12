@@ -299,6 +299,56 @@ def test_demo_navegacion_conserva_la_instancia_al_cambiar_metodo():
     assert modelo.adj == instancia and modelo.indice == 0
 
 
+def test_greedy_aleatorio_gana_despues_de_podar_y_conserva_el_primer_empate():
+    from algoritmos import greedy_aleatorio
+
+    estrella = {0: {1, 2, 3}, 1: {0}, 2: {0}, 3: {0}}
+    primer_intento = greedy_aleatorio(estrella, seed=2, intentos=1)
+    ganador = greedy_aleatorio(estrella, seed=2)
+    assert primer_intento.cobertura == {1, 2, 3}
+    assert ganador.cobertura == {0} and ganador.intento_ganador == 2
+    assert ganador.orden == (2, 0)  # A lower-degree leaf was a valid candidate.
+    assert ganador.intentos == 10
+    assert ganador == greedy_aleatorio(dict(reversed(list(estrella.items()))), seed=2)
+
+
+def test_greedy_aleatorio_devuelve_coberturas_validas_sin_camaras_redundantes():
+    from algoritmos import greedy_aleatorio
+
+    for seed, adj in enumerate(instancias_chicas()):
+        resultado = greedy_aleatorio(adj, seed=seed)
+        assert es_cobertura(adj, resultado.cobertura)
+        assert all(not es_cobertura(adj, resultado.cobertura - {v})
+                   for v in resultado.cobertura)
+
+
+def test_demo_greedy_aleatorio_reproduce_la_poda_del_intento_ganador():
+    from demo_viva import crear_pasos
+
+    estrella = {0: {1, 2, 3}, 1: {0}, 2: {0}, 3: {0}}
+    pasos = crear_pasos(estrella, "Greedy aleatorio", seed=2)
+    assert [paso.camaras for paso in pasos] == [set(), {2}, {0, 2}, {0}]
+    assert [paso.nuevas_camaras for paso in pasos[1:3]] == [(2,), (0,)]
+    assert pasos[-1].retiradas == {2}
+    assert pasos[-1].cubiertas == pasos[-2].cubiertas == set(aristas(estrella))
+    assert not pasos[-1].recientes
+    assert all(paso.intento_ganador == 2 and paso.intentos == 10 for paso in pasos)
+
+
+def test_demo_greedy_aleatorio_usa_la_semilla_de_la_instancia():
+    from algoritmos import greedy_aleatorio
+    from demo_viva import Simulacion
+
+    modelo = Simulacion()
+    modelo.generar(3, 4, 0.4, 0.2, 19)
+    instancia = modelo.adj
+    modelo.cambiar_metodo("Greedy aleatorio")
+    assert modelo.adj is instancia and modelo.indice == 0
+    esperado = greedy_aleatorio(instancia, seed=19)
+    assert modelo.pasos[-1].camaras == esperado.cobertura
+    assert modelo.pasos[-1].intento_ganador == esperado.intento_ganador
+
+
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":

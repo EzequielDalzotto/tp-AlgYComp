@@ -17,7 +17,7 @@ máximo en grafos generales (cota inferior), nunca para resolver Vertex Cover.
 | `complejidad.py` | Verificador `es_cobertura` (certificado en NP), reducción Vertex Cover <-> Independent Set, fuerza bruta y verificación empírica |
 | `experimentos.py` | Barridos con réplicas y semillas, tiempos, razones de aproximación, CSV |
 | `visualizacion.py` | Dibujo de la grilla con la cobertura y gráficas de resultados |
-| `demo_viva.py` | Reproducción gráfica de las decisiones de greedy y matching maximal |
+| `demo_viva.py` | Reproducción gráfica de greedy, matching maximal y greedy aleatorio |
 | `tests.py` | Pruebas automáticas (`python tests.py`) |
 | `main.py` | `python main.py demo`, `en-vivo`, `rapido` o `completo` |
 | `notebook.ipynb` | Experimentos del informe, en el orden del proyecto |
@@ -45,6 +45,12 @@ print(branching_exacto(g, timeout=10))     # óptimo exacto con límite de tiemp
 En una sesión de escritorio, ejecutá `python main.py en-vivo`. **Siguiente** avanza una
 decisión, **Anterior** vuelve una y **Reiniciar** conserva el mapa. Al cambiar de
 algoritmo, se vuelve al paso cero sobre la misma instancia.
+
+**Greedy aleatorio** elige al azar entre hasta tres cruces con más calles
+pendientes. Hace diez intentos con la semilla de la instancia y retira cámaras
+redundantes en cada uno. Se reproduce únicamente el primer intento que logró
+la menor cantidad de cámaras. Si hubo retiradas en ese intento, se muestran
+en el último paso. Este método se agrega a la demo en vivo, no a los barridos.
 
 Para comparar perturbaciones, cambiá las dimensiones (2–8), las probabilidades
 (0–1) o la semilla y pulsá **Generar instancia**. Por ejemplo: probá la grilla
